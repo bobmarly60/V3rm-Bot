@@ -7,8 +7,8 @@ import requests
 # --- YOUR V3RM WEBHOOK ---
 V3RM_WEBHOOK = "https://discord.com/api/webhooks/1562446938580844644/3ExO8a9pWQtk9mYarD-Up4otbU01Q5UCDQ-HnBqhh59bA_tJVUMLgTWBJoZgjmJ_aXol"
 
-# --- YOUR CLOUDFLARE WORKER PROXY ---
-V3RM_PROXY = "https://v3rm-proxy.ppackdtreeze.workers.dev/?url=https%3A%2F%2Fv3rm.net%2Fforums%2Froblox.19%2Findex.rss"
+# --- YOUR CLOUDFLARE WORKER PROXY (FIXED) ---
+V3RM_PROXY = "https://v3rm-proxy.ppacktreeze.workers.dev/?url=https%3A%2F%2Fv3rm.net%2Fforums%2Froblox.19%2Findex.rss"
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"}
 
