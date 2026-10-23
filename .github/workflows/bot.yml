@@ -1,0 +1,27 @@
+name: V3rm Bot
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install requests
+      - run: python -u main.py
+      - run: |
+          git config user.name 'github-actions'
+          git config user.email 'actions@github.com'
+          git add v3rm_seen.txt 2>/dev/null || true
+          git commit -m "update seen" || exit 0
+          git push
