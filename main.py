@@ -1,17 +1,12 @@
-# Python 3.10+, GitHub Actions — V3rm roblox.19 → Discord
+# Python 3.10+, GitHub Actions — V3rm with Playwright
 import os
 import time
 import re
 import requests
+from playwright.sync_api import sync_playwright
 
-# --- YOUR V3RM WEBHOOK ---
 V3RM_WEBHOOK = "https://discord.com/api/webhooks/1562446938580844644/3ExO8a9pWQtk9mYarD-Up4otbU01Q5UCDQ-HnBqhh59bA_tJVUMLgTWBJoZgjmJ_aXol"
-
-# --- YOUR CLOUDFLARE WORKER PROXY ---
-V3RM_PROXY = "https://v3rm-proxy.ppacktreeze.workers.dev/?url=https%3A%2F%2Fv3rm.net%2Fforums%2Froblox.19%2Findex.rss"
-
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"}
-
+V3RM_URL = "https://v3rm.net/forums/roblox.19/index.rss"
 V3RM_SEEN = "v3rm_seen.txt"
 
 def load_seen(path):
@@ -24,30 +19,34 @@ def save_seen(path, seen):
     with open(path, "w") as f:
         f.write("\n".join(sorted(seen)) + ("\n" if seen else ""))
 
-def send_discord(title, description, url):
-    payload = {"embeds": [{
-        "title": title[:256], "url": url, 
-        "description": description[:2048], 
-        "color": 0xE74C3C, "footer": {"text": "V3rm · roblox.19"}
-    }]}
-    try:
-        r = requests.post(V3RM_WEBHOOK, json=payload, headers=HEADERS, timeout=15)
-        print("[hook]", r.status_code, "::", title[:60])
-        time.sleep(1)
-    except Exception as e:
-        print("[hook] error:", e)
+def send_discord(title, url):
+    payload = {"embeds": [{"title": title[:256], "url": url, "color": 0xE74C3C, "footer": {"text": "V3rm · roblox.19"}}]}
+    requests.post(V3RM_WEBHOOK, json=payload)
 
 def check_v3rm():
-    print("[v3rm] checking...")
+    print("[v3rm] Launching real Chrome browser...")
     seen = load_seen(V3RM_SEEN)
     baseline = not seen
+    
     try:
-        r = requests.get(V3RM_PROXY, headers=HEADERS, timeout=20)
-        print("[v3rm] status:", r.status_code)
-        if r.status_code != 200: return
-        
-        # Parse the XML for new posts
-        items = re.findall(r'<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>', r.text, re.DOTALL)
+        with sync_playwright() as p:
+            # Launch a real Chrome instance
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            
+            # Go to the RSS feed
+            page.goto(V3RM_URL, timeout=60000)
+            
+            # Wait for Cloudflare to pass (it usually redirects to the XML)
+            time.sleep(5) 
+            
+            # Grab the page content (which will be the XML text)
+            html_content = page.content()
+            browser.close()
+
+        # Parse the XML
+        items = re.findall(r'<item>.*?<title>(.*?)</title>.*?<link>(.*?)</link>', html_content, re.DOTALL)
+        print(f"[v3rm] Found {len(items)} items.")
         
         for title, link in reversed(items):
             link = link.strip()
@@ -55,9 +54,10 @@ def check_v3rm():
             if link in seen: continue
             if baseline:
                 seen.add(link); continue
-                
-            send_discord(title, "**New post in roblox.19**", link)
+            
+            send_discord(title, link)
             seen.add(link)
+            
     except Exception as e:
         print("[v3rm] error:", e)
         
@@ -68,8 +68,7 @@ if __name__ == "__main__":
     print("Starting V3rm loop...")
     start_time = time.time()
     
-    # Loop for ~5 hours 50 mins
     while time.time() - start_time < 21000:
         check_v3rm()
-        print("Sleeping for 300 seconds (5 minutes)...")
-        time.sleep(300)  # Changed from 60 to 300 to avoid rate limits
+        print("Sleeping for 300 seconds...")
+        time.sleep(300)
